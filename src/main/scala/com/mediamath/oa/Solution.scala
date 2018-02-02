@@ -1,130 +1,110 @@
 package com.mediamath.oa
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.types._
 
 import scala.collection.mutable
 
 
 
 object Solution {
+
+  // This func transform events to key value pair.
+  def eventsToKv(line: String) = {
+    val L = line.split(",")
+    ((L(2), L(3)), (L(0), L(4)))    // KV pair: (adId, userId), (ts, type)
+  }
+
+
+  // This func transform impressions to key value pair.
+  def impsToKv(line: String) = {
+    val L = line.split(",")
+    ((L(1), L(3)), (L(0), "impression"))  // KV pair: (adId, userId), (ts, "impression")
+  }
+
+
+  /**
+    * This function deduplicates and filters attributed events for each partitions
+    * @param partitions
+    * @return
+    */
+  def filterAttributedEvent(partitions: Iterator[((String, String), List[(String, String)])]) = {
+    // A hashmap for saving the ts from last (adId, userId, eventType)
+    val mp = mutable.HashMap[(String, String, String), Int]()
+
+    val output = mutable.ArrayBuffer[Row]()
+    var isAttributed = false
+
+    for (p <- partitions) {
+      for (value <- p._2) {
+        val key = (p._1._1, p._1._2, value._2)   // adId, userId, eventType
+        val ts = value._1.toInt
+        val eventType = value._2
+
+        // Update flag
+        if (eventType == "impression" && ! isAttributed) isAttributed = true
+
+        // Append attributed event and change flag
+        if (eventType != "impression" && isAttributed ) {
+          if (! mp.contains(key) || ts - mp(key) >= 60) {
+            output += (Row(p._1._1, p._1._2, value._1, value._2))
+            isAttributed = false
+          }
+        }
+
+        if (eventType != "impression") mp(key) = ts   // Update map with timestamp
+      }
+    }
+
+    output.toIterator // Row(adId, userId, ts, eventType)
+  }
+
+
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("wordCount")
     val sc = new SparkContext(conf)
-//    val spark = SparkSession
-//      .builder()
-//      .appName("Spark SQL basic example")
-//      .config("spark.some.config.option", "some-value")
-//      .getOrCreate()
+    val spark = SparkSession
+      .builder()
+      .appName("Spark SQL basic example")
+      .config("spark.some.config.option", "some-value")
+      .getOrCreate()
 
-    //val eventsSchema = Encoders.product[Event].schema
-    //val events = spark.read.schema(eventsSchema).csv("file:/Users/dishao/SRC/mediamath-oa/events.csv")
+    // 1. Load Input Files
+    val events = sc.textFile("./events.csv")
+    val imps = sc.textFile("./impressions.csv")
 
-    //val impsSchema = Encoders.product[Impression].schema
-    //val imps = spark.read.schema(impsSchema).csv("file:/Users/dishao/SRC/mediamath-oa/impressions.csv")
+    // 2. Pre-process: Deduplicate and Filter Attributed Events
+    val eventsKv = events.map(eventsToKv)
+    val impsKv = imps.map(impsToKv)
+    val preDedup = eventsKv.union(impsKv)
 
-    val textFile = sc.textFile("file:/Users/dishao/SRC/mediamath-oa/events.csv")
-
-    // RDD after deduplicate.
-    // Schema: (userId, adId, eventType ), List[timestamp, event-id]
-    val dedup = textFile.map(mapFunc)
-      .groupByKey(4)
-      .mapValues(x => x.toList.sortBy(_(0)))
-      .mapPartitions(mapPartitionFunc)
-
-  }
+    val afterDedup: RDD[Row] = preDedup.groupByKey(4)
+      .mapValues(x => x.toList.sortBy(_._1))
+      .mapPartitions(filterAttributedEvent)
 
 
-  // Map Line into Key Value Pair
-  def mapFunc(line: String) = {
-    val l: Array[String] = line.split(",")
-    ((l(3), l(2), l(4)), List(l(0), l(1)))
-  }
+    val schema = new StructType()
+      .add(StructField("adId", StringType, false))
+      .add(StructField("userId", StringType, false))
+      .add(StructField("timestamp", StringType, false))
+      .add(StructField("eventType", StringType, false))
 
-  // Deduplication if timestamp now is less than 60s of the last time stamp
-  def mapPartitionFunc(partitions: Iterator[((String, String, String), List[List[String]])] )
-    : Iterator[((String, String, String), List[String])] = {
-    val mp = mutable.HashMap[(String, String, String), Int]()
-    val output = mutable.ArrayBuffer[((String, String, String), List[String])]()
+    val attributedEvents = spark.createDataFrame(afterDedup, schema)
+    spark.createDataFrame(afterDedup, schema).createOrReplaceTempView("attributedEvents")
 
-    for (p <- partitions) {
-      val key: (String, String, String) = p._1
-      val values: Seq[List[String]] = p._2
+    // 3. Output
+    // 3.1 count_of_events
+    spark.sql("SELECT adId, eventType, count(*) FROM attributedEvents as ae group by adId, eventType")
+      .write.format("com.databricks.spark.csv")
+      .save("./output/count_of_events.csv")
 
-      for (value <- values) {
-        val ts = value(0).toInt
-        if (! mp.contains(key)) {
-          mp += (key -> ts)
-        } else {
-          if (mp(key) - ts < 60) {
-            mp(key) = ts
-            output += ((key, value))
-          }
-        }
-      }
-    }
-    output.toIterator
+    // 3.2 count_of_unique_users
+    spark.sql("SELECT adId, eventType, count(distinct userId) from ae group by adId, eventType")
+      .write.format("com.databricks.spark.csv")
+      .save("./output/count_of_unique_users.csv")
+
   }
 
 }
-
-case class Event(ts: Int, eventId: String, adId: String, userId: String, eventType: String)
-
-case class Impression(ts: Int, adId: String, creativeId: String, userId: String)
-
-
-/*
-
-val textFile = sc.textFile("file:/Users/dishao/SRC/mediamath-oa/events.csv")
-
-events.orderBy("userId", "adId", "eventType", "ts")
-
-import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions._
-
-
-val wspec = Window.partitionBy("userId", "adId", "eventType").orderBy("ts")
-
-val e2 = events.withColumn("prevTs", lag(events("ts"), 1).over(wspec)).show()
-
-e2.collect.foreach(println)
-
-val dedup = e2.filter("prevTs is null or ts - prevTs >= 60")
-
-//join impression table on
-
-
- */
-/*
-val rddevents = events.rdd
-
-rddevents.foreach(s => println(s.getAs("userId")))
-
-val counts = textFile.map(line => {
- val l = line.split(",")
-((l(1), l(2)), 1)
-})
-
-val counts = textFile.map(line => {
-val l = line.split(","); ((l(3), l(2), l(4)), line) })
-
- */
-/*
-
-Partition by this
-
-2,7fe40811-7d3b-42b9-83ff-58eee06859d9,purchase
-
-For each partition
-
-filter events if
-
-
- */
-/*
-
-counts.foreachPartition(p => p.foreach(line => println(line._1._3 )  ))
-*/
-
-
