@@ -63,7 +63,7 @@ object Solution {
 
 
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("wordCount")
+    val conf = new SparkConf().setAppName("Solution")
     val sc = new SparkContext(conf)
     val spark = SparkSession
       .builder()
@@ -72,8 +72,8 @@ object Solution {
       .getOrCreate()
 
     // 1. Load Input Files
-    val events = sc.textFile("./events.csv")
-    val imps = sc.textFile("./impressions.csv")
+    val events = sc.textFile("./input/events.csv")
+    val imps = sc.textFile("./input/impressions.csv")
 
     // 2. Pre-process: Deduplicate and Filter Attributed Events
     val eventsKv = events.map(eventsToKv)
@@ -101,7 +101,7 @@ object Solution {
       .save("./output/count_of_events.csv")
 
     // 3.2 count_of_unique_users
-    spark.sql("SELECT adId, eventType, count(distinct userId) from ae group by adId, eventType")
+    spark.sql("SELECT adId, eventType, count(distinct userId) from attributedEvents as ae group by adId, eventType")
       .write.format("com.databricks.spark.csv")
       .save("./output/count_of_unique_users.csv")
 
