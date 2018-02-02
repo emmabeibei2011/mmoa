@@ -10,19 +10,20 @@
  
 ### Documentation for launching a development environment and running the application.
 
-- Make sure below software is installed.
+#### Make sure below software is installed.
 
-  - Java Runtime Environment 8 (1.8.0_144 or up)
-  - Scala 2.11.8 (No scala 2.12)
-  - Spark 2.2.1
+- Java Runtime Environment 8 (1.8.0_144 or up)
+- Scala 2.11.8 (No scala 2.12)
+- Spark 2.2.1
+- sbt 0.13.16
 
-- To run the program locally with client deploy mode.
+#### To run the program locally with client deploy mode.
 
 ```$xslt
 $ spark-submit --master local[*] --class com.mediamath.oa.Solution --deploy-mode client ./mediamath-oa_2.11-0.1.jar
 ```
 
-- Once program finished, output files should be generated in ./output/ folder. To view them run
+#### Once program finished, output files should be generated in ./output/ folder. To view them run
 
 ```$xslt
 $ cat output/count_of_events.csv/part-00*
@@ -37,7 +38,7 @@ $ cat output/count_of_unique_users.csv/part-00*
 
 ```
 
-- To Run the tests
+##### To run the tests
 ```$xslt
 $ sbt test
 [info] Loading global plugins from /Users/dishao/.sbt/0.13/plugins
@@ -51,9 +52,7 @@ $ sbt test
 [success] Total time: 7 s, completed Feb 2, 2018 3:53:02 PM
 ```
 
-- To build from source code (Optional)
-
-Make sure sbt 0.13.16 is installed
+#### To build from source code
 
 ```$xslt
 $ sbt package
