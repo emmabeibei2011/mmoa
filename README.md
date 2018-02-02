@@ -1,5 +1,3 @@
-## Deliverables
-
 ### Code of the application.
  
 - Source code path: ./src/main/scala/com/mediapath/oa/Solution.scala
@@ -7,6 +5,7 @@
 - Input path: ./input/
 - Output path: ./output/
   
+---
  
 ### Documentation for launching a development environment and running the application.
 
@@ -38,7 +37,7 @@ $ cat output/count_of_unique_users.csv/part-00*
 
 ```
 
-##### To run the tests
+#### To run the tests
 ```$xslt
 $ sbt test
 [info] Loading global plugins from /Users/dishao/.sbt/0.13/plugins
