@@ -6,9 +6,7 @@ Source code path: ./src/main/scala/com/mediapath/oa/Solution.scala
 Compiled jar: mediamath-oa_2.11-0.1.jar
 Input path: ./input/
 Output path: ./output/
- 
-### Test suite for the application.
- 
+  
  
 ### Documentation for launching a development environment and running the application.
 
@@ -39,6 +37,19 @@ $ cat output/count_of_unique_users.csv/part-00*
 
 ```
 
+- To Run the tests
+```$xslt
+$ sbt test
+[info] Loading global plugins from /Users/dishao/.sbt/0.13/plugins
+...
+...
+[info] Run completed in 333 milliseconds.
+[info] Total number of tests run: 3
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 3, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
+[success] Total time: 7 s, completed Feb 2, 2018 3:53:02 PM
+```
 
 - To build from source code (Optional)
 

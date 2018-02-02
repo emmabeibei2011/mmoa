@@ -14,6 +14,7 @@ object Solution {
   // This func transform events to key value pair.
   def eventsToKv(line: String) = {
     val L = line.split(",")
+    if (L.length != 5) throw new IllegalArgumentException("Schema of events file is not correct")
     ((L(2), L(3)), (L(0), L(4)))    // KV pair: (adId, userId), (ts, type)
   }
 
@@ -21,6 +22,7 @@ object Solution {
   // This func transform impressions to key value pair.
   def impsToKv(line: String) = {
     val L = line.split(",")
+    if (L.length != 4) throw new IllegalArgumentException("Schema of impressions file is not correct")
     ((L(1), L(3)), (L(0), "impression"))  // KV pair: (adId, userId), (ts, "impression")
   }
 
@@ -48,13 +50,12 @@ object Solution {
 
         // Append attributed event and change flag
         if (eventType != "impression" && isAttributed ) {
-          if (! mp.contains(key) || ts - mp(key) >= 60) {
+          if (! mp.contains(key) || (mp.contains(key) && ts - mp(key) >= 60)) {
             output += (Row(p._1._1, p._1._2, value._1, value._2))
+            if (eventType != "impression") mp(key) = ts   // Update map with timestamp
             isAttributed = false
           }
         }
-
-        if (eventType != "impression") mp(key) = ts   // Update map with timestamp
       }
     }
 
