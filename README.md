@@ -2,19 +2,19 @@
 
 ### Code of the application.
  
-Source code path: ./src/main/scala/com/mediapath/oa/Solution.scala
-Compiled jar: mediamath-oa_2.11-0.1.jar
-Input path: ./input/
-Output path: ./output/
+- Source code path: ./src/main/scala/com/mediapath/oa/Solution.scala
+- Compiled jar: mediamath-oa_2.11-0.1.jar
+- Input path: ./input/
+- Output path: ./output/
   
  
 ### Documentation for launching a development environment and running the application.
 
 - Make sure below software is installed.
 
-- - Java Runtime Environment 8 (1.8.0_144 or up)
-- - Scala 2.11.8 (No scala 2.12)
-- - Spark 2.2.1
+  - Java Runtime Environment 8 (1.8.0_144 or up)
+  - Scala 2.11.8 (No scala 2.12)
+  - Spark 2.2.1
 
 - To run the program locally with client deploy mode.
 
